@@ -267,7 +267,9 @@ func (cs *CognitiveServer) matchPattern(c *gin.Context) {
 	// Convert constraints to proper format
 	constraintFuncs := make(map[string]func(*opencog.Atom) bool)
 	for variable := range req.Constraints {
-		constraintFuncs[variable] = func(atom *opencog.Atom) bool {
+		// Create a local copy to avoid closure issues
+		v := variable
+		constraintFuncs[v] = func(atom *opencog.Atom) bool {
 			// Simple constraint evaluation - in practice this would be more sophisticated
 			return true
 		}

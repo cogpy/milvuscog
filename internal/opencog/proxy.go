@@ -14,6 +14,7 @@ package opencog
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/milvus-io/milvus/pkg/v2/log"
@@ -443,38 +444,10 @@ func extractKeywords(text string) []string {
 // matchesKeyword checks if a concept name matches a keyword
 func matchesKeyword(conceptName, keyword string) bool {
 	// Simple substring matching (case-insensitive)
-	conceptLower := toLower(conceptName)
-	keywordLower := toLower(keyword)
+	conceptLower := strings.ToLower(conceptName)
+	keywordLower := strings.ToLower(keyword)
 	
-	return contains(conceptLower, keywordLower) || contains(keywordLower, conceptLower)
-}
-
-// toLower converts string to lowercase (simplified)
-func toLower(s string) string {
-	result := ""
-	for _, char := range s {
-		if char >= 'A' && char <= 'Z' {
-			result += string(char + 32)
-		} else {
-			result += string(char)
-		}
-	}
-	return result
-}
-
-// contains checks if string contains substring (simplified)
-func contains(s, substr string) bool {
-	if len(substr) > len(s) {
-		return false
-	}
-	
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	
-	return false
+	return strings.Contains(conceptLower, keywordLower) || strings.Contains(keywordLower, conceptLower)
 }
 
 // getCurrentTimestamp returns current timestamp in milliseconds

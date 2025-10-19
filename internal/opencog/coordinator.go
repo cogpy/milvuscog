@@ -15,6 +15,8 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -447,14 +449,10 @@ func (cc *CognitiveCoordinator) CognitiveSearch(
 		hits = append(hits, hit)
 	}
 	
-	// Sort by similarity
-	for i := 0; i < len(hits)-1; i++ {
-		for j := i + 1; j < len(hits); j++ {
-			if hits[i].Similarity < hits[j].Similarity {
-				hits[i], hits[j] = hits[j], hits[i]
-			}
-		}
-	}
+	// Sort by similarity using Go's built-in sort
+	sort.Slice(hits, func(i, j int) bool {
+		return hits[i].Similarity > hits[j].Similarity
+	})
 	
 	// Take top K
 	if len(hits) > topK {
@@ -511,13 +509,33 @@ type ReasoningStep struct {
 	Confidence  float32
 }
 
+// calculateVectorSimilarity calculates cosine similarity between vectors
+func (cc *CognitiveCoordinator) calculateVectorSimilarity(vec1, vec2 []float32) float32 {
+	if len(vec1) != len(vec2) {
+		return 0.0
+	}
+	
+	var dotProduct, norm1, norm2 float32
+	for i := 0; i < len(vec1); i++ {
+		dotProduct += vec1[i] * vec2[i]
+		norm1 += vec1[i] * vec1[i]
+		norm2 += vec2[i] * vec2[i]
+	}
+	
+	if norm1 == 0 || norm2 == 0 {
+		return 0.0
+	}
+	
+	return dotProduct / (float32(math.Sqrt(float64(norm1))) * float32(math.Sqrt(float64(norm2))))
+}
+
 // Helper methods
 
 // belongsToCollection checks if an atom belongs to a specific collection
 func (cc *CognitiveCoordinator) belongsToCollection(atom *Atom, collectionID string) bool {
-	// Simple implementation - check if atom ID contains collection ID
-	// In practice, this would be more sophisticated
-	return true // For now, assume all atoms belong to the collection
+	// Check if atom ID contains collection ID prefix
+	prefix := fmt.Sprintf("vec_%s_", collectionID)
+	return strings.HasPrefix(atom.ID, prefix)
 }
 
 // matchesConceptFilters checks if an atom matches concept filters
@@ -538,26 +556,6 @@ func (cc *CognitiveCoordinator) matchesConceptFilters(atom *Atom, conceptFilters
 	}
 	
 	return true
-}
-
-// calculateVectorSimilarity calculates cosine similarity between vectors
-func (cc *CognitiveCoordinator) calculateVectorSimilarity(vec1, vec2 []float32) float32 {
-	if len(vec1) != len(vec2) {
-		return 0.0
-	}
-	
-	var dotProduct, norm1, norm2 float32
-	for i := 0; i < len(vec1); i++ {
-		dotProduct += vec1[i] * vec2[i]
-		norm1 += vec1[i] * vec1[i]
-		norm2 += vec2[i] * vec2[i]
-	}
-	
-	if norm1 == 0 || norm2 == 0 {
-		return 0.0
-	}
-	
-	return dotProduct / (float32(math.Sqrt(float64(norm1))) * float32(math.Sqrt(float64(norm2))))
 }
 
 // getAtomConcepts gets concepts associated with an atom
@@ -709,7 +707,7 @@ func (cc *CognitiveCoordinator) performAttentionMaintenance() {
 	cc.atomSpace.mutex.RUnlock()
 	
 	for _, atomID := range atomIDs {
-		err := cc.attentionAllocation.UpdateAttention(atomID, -5) // Small decay
+		err := cc.attentionAllocation.UpdateAttention(atomID, AttentionDecayRate) // Small decay
 		if err != nil {
 			// Ignore errors for attention updates
 			continue

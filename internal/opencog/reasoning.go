@@ -21,6 +21,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// Constants for attention management
+const (
+	DefaultSTI         = int16(75)
+	AttentionDecayRate = int16(-5)
+)
+
 // ReasoningEngine provides cognitive reasoning capabilities over the AtomSpace
 type ReasoningEngine struct {
 	atomSpace *AtomSpace
@@ -133,7 +139,7 @@ func (pln *PLNReasoner) calculateDeductionStrength(link1, link2 *Atom) float32 {
 	s2, c2 := link2.TruthValue.Strength, link2.TruthValue.Confidence
 	
 	strength := s1 * s2
-	confidence := c1 * c2 * s1 * s2
+	confidence := c1 * c2 // Proper confidence calculation without strength
 	
 	return strength * confidence
 }
@@ -165,7 +171,7 @@ func (as *AtomSpace) createInheritanceLink(from, to *Atom, strength float32) *At
 			Confidence: 0.8,
 		},
 		AttentionValue: &AttentionValue{
-			STI:  75,
+			STI:  DefaultSTI,
 			LTI:  0,
 			VLTI: false,
 		},
